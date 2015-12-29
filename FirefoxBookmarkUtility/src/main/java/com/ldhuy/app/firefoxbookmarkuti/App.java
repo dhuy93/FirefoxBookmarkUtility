@@ -1,5 +1,7 @@
 package com.ldhuy.app.firefoxbookmarkuti;
 
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -10,49 +12,110 @@ import java.io.IOException;
 import java.util.List;
 
 import javax.swing.JFrame;
+import javax.swing.JSplitPane;
 
 import com.google.gson.Gson;
-import com.ldhuy.app.firefoxbookmarkuti.gui.ResultView;
+import com.ldhuy.app.firefoxbookmarkuti.gui.TableView;
 import com.ldhuy.app.firefoxbookmarkuti.gui.TreeView;
 import com.ldhuy.app.firefoxbookmarkuti.model.Bookmark;
 import com.ldhuy.app.firefoxbookmarkuti.model.BookmarkDTO;
 import com.ldhuy.app.firefoxbookmarkuti.model.TableModel;
 import com.ldhuy.app.firefoxbookmarkuti.model.TreeViewModel;
 
+import javafx.scene.layout.Border;
+
 /**
  * Hello world!
  *
  */
 public class App {
+	/**
+	 * The main frame of the application
+	 */
 	private JFrame mainFrame;
-	private ResultView resultView;
+	
+	/**
+	 * Split panel contains table view and tree view
+	 */
+	private JSplitPane splitPane;
+	
+	/**
+	 * The table view
+	 */
+	private TableView tableView;
+	
+	/**
+	 * The tree view to view folders in a tree structure
+	 */
 	private TreeView treeView;
+	
+	/**
+	 * Model for table view
+	 */
 	private TableModel tableModel;
+	
+	/**
+	 * Model for tree view
+	 */
 	private TreeViewModel treeModel;
-	private String[] columnNames = { "ID", "Title", "Tags", "Location" };
+	
+	/**
+	 * Columns of table view
+	 */
+	private String[] columnNames = { "Type", "Title", "Tags", "Location" };
+	
+	/**
+	 * The root node of the bookmark tree
+	 */
+	private BookmarkDTO root;
+	
+	/**
+	 * The selected folder in the tree view
+	 */
+	public static BookmarkDTO selectedContainer;
+	
 
-	public App() {
+	public App(BookmarkDTO root) {
+		this.root = root;
+		this.selectedContainer = root;
 		prepareGUI();
+//		Object[][] data = convertToTableData(root);
+		setTableData(new Object[0][0]);
+		setTreeData(this.selectedContainer);
 	}
 
 	private void prepareGUI() {
+		// main frame
 		mainFrame = new JFrame("Firefox Bookmark Utility");
 		mainFrame.setSize(800, 600);
-		mainFrame.setLayout(new GridLayout(2, 2));
+		mainFrame.setLayout(new BorderLayout());
 		mainFrame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent windowEvent) {
 				System.exit(0);
 			}
 		});
+		
+		// result view
 		this.tableModel = new TableModel(columnNames);
-		resultView = new ResultView(this.tableModel);
+		tableView = new TableView(this.tableModel);
+		
+		// tree view
 		this.treeView = new TreeView();
-		mainFrame.add(resultView);
-		mainFrame.add(treeView);
+//		this.treeView.setSize(700, 300);
+		this.treeView.setTableModel(this.tableModel);
+		
+		// Split pane
+		this.splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, this.treeView, this.tableView);
+		this.splitPane.setDividerLocation(250);
+
+//		mainFrame.add(treeView, BorderLayout.LINE_START);
+//		mainFrame.add(resultView, BorderLayout.CENTER);
+		mainFrame.add(this.splitPane, BorderLayout.CENTER);
+		mainFrame.pack();
 	}
 
 	public void setTableData(Object[][] data) {
-		resultView.getTableModel().setData(data);
+		tableView.getTableModel().setData(data);
 	}
 
 	public void setTreeData(BookmarkDTO root) {
@@ -87,20 +150,11 @@ public class App {
 
 		Gson gson = new Gson();
 		BookmarkDTO bookmarkDTO = gson.fromJson(sb.toString(), BookmarkDTO.class);
-		Bookmark bookmark = bookmarkDTO.toBookmark();
-		List<BookmarkDTO> list = bookmarkDTO.getChildren();
-		Object[][] data = new Object[list.size()][4];
-		for (int i = 0; i < list.size(); ++i) {
-			data[i][0] = (list.get(i).getId() != null) ? list.get(i).getId() : "";
-			data[i][1] = (list.get(i).getTitle() != null) ? list.get(i).getTitle() : "";
-			data[i][2] = (list.get(i).getTags() != null) ? list.get(i).getTags() : "";
-			data[i][3] = (list.get(i).getUri() != null) ? list.get(i).getUri() : "";
-		}
+		
 
-		App fbu = new App();
-		fbu.setTableData(data);
-		fbu.setTreeData(bookmarkDTO);
+		App fbu = new App(bookmarkDTO);
 		fbu.show();
 		System.out.println(System.currentTimeMillis() - t0);
 	}
+	
 }

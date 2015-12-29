@@ -4,6 +4,8 @@
 package com.ldhuy.app.firefoxbookmarkuti.gui;
 
 import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.ScrollPane;
 
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -16,7 +18,7 @@ import com.ldhuy.app.firefoxbookmarkuti.model.TableModel;
  * @author ldhuy
  *
  */
-public class ResultView extends JPanel {
+public class TableView extends JPanel {
 	/**
 	 * 
 	 */
@@ -25,7 +27,8 @@ public class ResultView extends JPanel {
 	private JTable table;
 	private TableModel tableModel;
 
-	public ResultView(TableModel tableModel) {
+	public TableView(TableModel tableModel) {
+		this.setLayout(new GridLayout(1, 0, 10, 10));
 		this.tableModel = tableModel;
 		this.table = new JTable(this.tableModel);
 		this.scrollPane = new JScrollPane(this.table);
@@ -35,6 +38,7 @@ public class ResultView extends JPanel {
 		this.table.setIntercellSpacing(new Dimension(0, 0));
 		this.table.setDefaultRenderer(Object.class, new RowSelectionRenderer());
 		this.table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		this.scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 	}
 
 	/**
