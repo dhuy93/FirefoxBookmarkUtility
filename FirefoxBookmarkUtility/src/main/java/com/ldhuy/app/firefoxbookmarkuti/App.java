@@ -1,28 +1,43 @@
 package com.ldhuy.app.firefoxbookmarkuti;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.List;
+import java.util.Map;
 
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
 import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.KeyStroke;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.google.gson.Gson;
+import com.ldhuy.app.firefoxbookmarkuti.controller.SingleController;
 import com.ldhuy.app.firefoxbookmarkuti.gui.TableView;
+import com.ldhuy.app.firefoxbookmarkuti.gui.ToolBar;
 import com.ldhuy.app.firefoxbookmarkuti.gui.TreeView;
 import com.ldhuy.app.firefoxbookmarkuti.model.Bookmark;
 import com.ldhuy.app.firefoxbookmarkuti.model.BookmarkDTO;
+import com.ldhuy.app.firefoxbookmarkuti.model.MenuCommand;
 import com.ldhuy.app.firefoxbookmarkuti.model.TableModel;
 import com.ldhuy.app.firefoxbookmarkuti.model.TreeViewModel;
-
-import javafx.scene.layout.Border;
+import com.ldhuy.app.firefoxbookmarkuti.service.BookmarkService;
 
 /**
  * Hello world!
@@ -33,94 +48,129 @@ public class App {
 	 * The main frame of the application
 	 */
 	private JFrame mainFrame;
-	
+
 	/**
 	 * Split panel contains table view and tree view
 	 */
 	private JSplitPane splitPane;
-	
+
 	/**
 	 * The table view
 	 */
 	private TableView tableView;
-	
+
 	/**
 	 * The tree view to view folders in a tree structure
 	 */
 	private TreeView treeView;
-	
+
 	/**
-	 * Model for table view
+	 * The toolbar
 	 */
-	private TableModel tableModel;
-	
+	private ToolBar toolbar;
+
 	/**
-	 * Model for tree view
+	 * Controller that synchronises displayed data in tree view and table view
 	 */
-	private TreeViewModel treeModel;
-	
-	/**
-	 * Columns of table view
-	 */
-	private String[] columnNames = { "Type", "Title", "Tags", "Location" };
-	
+	private SingleController singleController;
+
 	/**
 	 * The root node of the bookmark tree
 	 */
 	private BookmarkDTO root;
-	
+
+	private final int WIDTH = 1200;
+	private final int HEIGHT = 800;
+
 	/**
 	 * The selected folder in the tree view
 	 */
-	public static BookmarkDTO selectedContainer;
-	
+	// public static BookmarkDTO selectedContainer;
 
-	public App(BookmarkDTO root) {
-		this.root = root;
-		this.selectedContainer = root;
+	/**
+	 * The menu bar
+	 */
+	private JMenuBar menuBar;
+
+	/**
+	 * File menu
+	 */
+	private JMenu fileMenu;
+
+	/**
+	 * File chooser
+	 */
+	private JFileChooser fileChooser;
+
+	public App() {
+		this.root = null;
+		// App.selectedContainer = root;
 		prepareGUI();
-//		Object[][] data = convertToTableData(root);
-		setTableData(new Object[0][0]);
-		setTreeData(this.selectedContainer);
+		singleController = new SingleController(this.tableView, this.treeView, this.toolbar);
+		// ttSync.init(this.root);
+		this.treeView.addObserver(singleController);
+		this.tableView.addObserver(singleController);
+		this.toolbar.addObserver(singleController);
 	}
 
 	private void prepareGUI() {
 		// main frame
 		mainFrame = new JFrame("Firefox Bookmark Utility");
-		mainFrame.setSize(800, 600);
+		mainFrame.setPreferredSize(new Dimension(WIDTH, HEIGHT));
 		mainFrame.setLayout(new BorderLayout());
 		mainFrame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent windowEvent) {
 				System.exit(0);
 			}
 		});
-		
-		// result view
-		this.tableModel = new TableModel(columnNames);
-		tableView = new TableView(this.tableModel);
-		
+
+		// Table view
+		this.tableView = new TableView();
+
 		// tree view
 		this.treeView = new TreeView();
-//		this.treeView.setSize(700, 300);
-		this.treeView.setTableModel(this.tableModel);
-		
+
 		// Split pane
-		this.splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, this.treeView, this.tableView);
+		this.splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, this.treeView.getMainPanel(),
+				this.tableView.getMainPanel());
 		this.splitPane.setDividerLocation(250);
 
-//		mainFrame.add(treeView, BorderLayout.LINE_START);
-//		mainFrame.add(resultView, BorderLayout.CENTER);
+		// Init toolbar
+		this.toolbar = new ToolBar();
+
+		// Menu
+		prepareMenuBar();
+
 		mainFrame.add(this.splitPane, BorderLayout.CENTER);
+		mainFrame.add(this.toolbar.getMainPanel(), BorderLayout.NORTH);
+		mainFrame.setJMenuBar(menuBar);
+		mainFrame.setLocation(50, 50);
 		mainFrame.pack();
+
+		// Initialize file chooser
+		this.fileChooser = new JFileChooser(System.getProperty("user.dir"));
+		FileNameExtensionFilter extFilter = new FileNameExtensionFilter("JSON files", "JSON");
+		fileChooser.setFileFilter(extFilter);
 	}
 
-	public void setTableData(Object[][] data) {
-		tableView.getTableModel().setData(data);
-	}
+	private void prepareMenuBar() {
+		menuBar = new JMenuBar();
+		fileMenu = new JMenu("File");
 
-	public void setTreeData(BookmarkDTO root) {
-		this.treeModel = new TreeViewModel(root);
-		this.treeView.setModel(this.treeModel);
+		JMenuItem openMenuItem = new JMenuItem(MenuCommand.OPENFILE.getValue(), KeyEvent.VK_O);
+		openMenuItem.setActionCommand(MenuCommand.OPENFILE.getValue());
+		openMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ActionEvent.CTRL_MASK));
+		JMenuItem saveMenuItem = new JMenuItem(MenuCommand.SAVEFILE.getValue(), KeyEvent.VK_S);
+		saveMenuItem.setActionCommand(MenuCommand.SAVEFILE.getValue());
+		saveMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
+
+		MenuItemListener menuItemListener = new MenuItemListener();
+
+		openMenuItem.addActionListener(menuItemListener);
+
+		fileMenu.add(openMenuItem);
+		menuBar.add(fileMenu);
+
 	}
 
 	public void show() {
@@ -128,16 +178,17 @@ public class App {
 	}
 
 	public static void main(String[] args) {
-		long t0 = System.currentTimeMillis();
+		App fbu = new App();
+		fbu.show();
+	}
 
-		// Parse input file
-		String filename = "res/bookmarks-2015-12-07[formated].json";
+	private static BookmarkDTO parseJsonFile(String path) {
 		String line = null;
 		StringBuilder sb = new StringBuilder();
 
 		FileReader fr;
 		try {
-			fr = new FileReader(filename);
+			fr = new FileReader(path);
 			BufferedReader br = new BufferedReader(fr);
 			while ((line = br.readLine()) != null) {
 				sb.append(line);
@@ -149,12 +200,32 @@ public class App {
 		}
 
 		Gson gson = new Gson();
-		BookmarkDTO bookmarkDTO = gson.fromJson(sb.toString(), BookmarkDTO.class);
-		
+		BookmarkDTO result = gson.fromJson(sb.toString(), BookmarkDTO.class);
 
-		App fbu = new App(bookmarkDTO);
-		fbu.show();
-		System.out.println(System.currentTimeMillis() - t0);
+		return result;
 	}
-	
+
+	private class MenuItemListener implements ActionListener {
+
+		public void actionPerformed(ActionEvent e) {
+			String actionCmd = e.getActionCommand();
+			System.out.println(actionCmd + " menu selected");
+
+			if (actionCmd.equals(MenuCommand.OPENFILE.getValue())) {
+				int returnValue = fileChooser.showOpenDialog(mainFrame);
+				if (returnValue == JFileChooser.APPROVE_OPTION) {
+					String filePath = fileChooser.getSelectedFile().getPath();
+					BookmarkDTO parsedJson = parseJsonFile(filePath);
+					root = parsedJson;
+					singleController.init(parsedJson);
+					toolbar.getSearchBox().setEnabled(true);
+					System.out.println(filePath);
+					Map<Long, Bookmark> result = BookmarkService.find(root.toBookmark(), "google");
+					System.out.println(result.size());
+				}
+			}
+		}
+
+	}
+
 }

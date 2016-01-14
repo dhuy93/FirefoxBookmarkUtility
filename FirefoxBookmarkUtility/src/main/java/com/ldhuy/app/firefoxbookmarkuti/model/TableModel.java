@@ -3,13 +3,13 @@
  */
 package com.ldhuy.app.firefoxbookmarkuti.model;
 
-import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableModel;
 
 /**
  * @author ldhuy
  *
  */
-public class TableModel extends AbstractTableModel {
+public class TableModel extends DefaultTableModel {
 	/**
 	 * 
 	 */
@@ -20,6 +20,11 @@ public class TableModel extends AbstractTableModel {
 	public TableModel(String[] columnNames) {
 		this.columnNames = columnNames;
 	}
+	
+	public TableModel() {
+		this.columnNames = new String[] {""};
+		this.data = new Object[0][];
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -27,7 +32,11 @@ public class TableModel extends AbstractTableModel {
 	 * @see javax.swing.table.TableModel#getColumnCount()
 	 */
 	public int getColumnCount() {
-		return columnNames.length;
+		if (columnNames != null) {
+			return columnNames.length;
+		} else {
+			return 0;
+		}
 	}
 
 	/*
@@ -36,7 +45,12 @@ public class TableModel extends AbstractTableModel {
 	 * @see javax.swing.table.TableModel#getRowCount()
 	 */
 	public int getRowCount() {
-		return data.length;
+		if (data != null) {
+			return data.length;
+		} else {
+			return 0;
+		}
+
 	}
 
 	/*

@@ -4,7 +4,7 @@
 package com.ldhuy.app.firefoxbookmarkuti.gui;
 
 import java.awt.GridLayout;
-import java.util.List;
+import java.util.Observable;
 
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -12,70 +12,65 @@ import javax.swing.JTree;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
-import com.ldhuy.app.firefoxbookmarkuti.App;
 import com.ldhuy.app.firefoxbookmarkuti.model.BookmarkDTO;
-import com.ldhuy.app.firefoxbookmarkuti.model.BookmarkType;
-import com.ldhuy.app.firefoxbookmarkuti.model.TableModel;
 import com.ldhuy.app.firefoxbookmarkuti.model.TreeViewModel;
 
 /**
  * @author ldhuy
  *
  */
-public class TreeView extends JPanel implements TreeSelectionListener {
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 4842193866029430484L;
+public class TreeView extends Observable implements TreeSelectionListener {
+	private JPanel mainPanel;
 	private JScrollPane scrollPane;
 	private JTree tree;
-	private TreeViewModel model;
+	private TreeViewModel treeModel;
 	private BookmarkDTO selectedNode;
-	private TableModel tableModel;
 
 	public TreeView() {
-		this.setLayout(new GridLayout(0, 1, 10, 10));
+		this.mainPanel = new JPanel();
+		this.mainPanel.setLayout(new GridLayout(0, 1, 10, 10));
 		this.tree = new JTree();
+
+		// Remove all default nodes
+		DefaultTreeModel tempTreeModel = (DefaultTreeModel) this.tree.getModel();
+		((DefaultMutableTreeNode) tempTreeModel.getRoot()).removeAllChildren();
+		tempTreeModel.reload();
+
 		this.scrollPane = new JScrollPane(this.tree);
-		this.add(this.scrollPane);
+		this.mainPanel.add(this.scrollPane);
 		this.tree.setRootVisible(false);
 		this.tree.setShowsRootHandles(false);
 		this.tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		this.tree.addTreeSelectionListener(this);
 	}
 
-	private Object[][] convertToTableData(BookmarkDTO bookmarkDTO) {
-		if (bookmarkDTO != null) {
-			List<BookmarkDTO> list = bookmarkDTO.getChildren();
-			if (list == null) {
-				return null;
-			}
-
-			Object[][] data = new Object[list.size()][4];
-			for (int i = 0; i < list.size(); ++i) {
-				data[i][0] = (list.get(i).getType().equals(BookmarkType.CONTAINER.getValue())) ? "Folder" : "";
-				data[i][1] = (list.get(i).getTitle() != null) ? list.get(i).getTitle() : "";
-				data[i][2] = (list.get(i).getTags() != null) ? list.get(i).getTags() : "";
-				data[i][3] = (list.get(i).getUri() != null) ? list.get(i).getUri() : "";
-			}
-
-			return data;
+	public void setRootNode(BookmarkDTO root) {
+		// TODO: handle root==null
+		this.treeModel = new TreeViewModel(root);
+		if (root != null) {
+			this.selectedNode = root;
 		}
-		return new Object[0][0];
+		this.tree.setModel(this.treeModel);
+		this.tree.setSelectionPath(new TreePath(this.treeModel.getRoot()));
 	}
 
-	public void setModel(TreeViewModel model) {
-		this.model = model;
-		if (this.model != null) {
-			this.selectedNode = (BookmarkDTO) this.model.getRoot();
-			Object[][] data = convertToTableData(this.selectedNode);
-			if (this.tableModel != null) {
-				this.tableModel.setData(data);
-			}
-		}
-		this.tree.setModel(this.model);
+	/**
+	 * @return the mainPanel
+	 */
+	public JPanel getMainPanel() {
+		return mainPanel;
+	}
+
+	/**
+	 * @param mainPanel
+	 *            the mainPanel to set
+	 */
+	public void setMainPanel(JPanel mainPanel) {
+		this.mainPanel = mainPanel;
 	}
 
 	/**
@@ -90,9 +85,9 @@ public class TreeView extends JPanel implements TreeSelectionListener {
 	 *            the scrollPane to set
 	 */
 	public void setScrollPane(JScrollPane scrollPane) {
-		this.remove(this.scrollPane);
+		this.mainPanel.remove(this.scrollPane);
 		this.scrollPane = scrollPane;
-		this.add(this.scrollPane);
+		this.mainPanel.add(this.scrollPane);
 	}
 
 	/**
@@ -112,36 +107,40 @@ public class TreeView extends JPanel implements TreeSelectionListener {
 		this.scrollPane.add(this.tree);
 	}
 
+	/**
+	 * @return the selectedNode
+	 */
+	public BookmarkDTO getSelectedNode() {
+		return selectedNode;
+	}
+
+	/**
+	 * @param selectedNode
+	 *            the selectedNode to set
+	 */
+	public void setSelectedNode(BookmarkDTO selectedNode) {
+		this.selectedNode = selectedNode;
+	}
+
+	/**
+	 * @return the treeModel
+	 */
+	public TreeViewModel getTreeModel() {
+		return treeModel;
+	}
+
 	public void valueChanged(TreeSelectionEvent e) {
 		BookmarkDTO node = (BookmarkDTO) tree.getLastSelectedPathComponent();
 
 		if (node != null) {
-			App.selectedContainer = node;
+			// App.selectedContainer = node;
 			this.selectedNode = node;
-			Object[][] data = convertToTableData(this.selectedNode);
-			this.tableModel.setData(data);
+			// Notify observer
+			setChanged();
+			notifyObservers(node);
 			System.out.println("Select node \"" + node.getTitle() + "\"");
 		} else {
 			System.out.println("nothing selected");
-		}
-	}
-
-	/**
-	 * @return the tableModel
-	 */
-	public TableModel getTableModel() {
-		return tableModel;
-	}
-
-	/**
-	 * @param tableModel
-	 *            the tableModel to set
-	 */
-	public void setTableModel(TableModel tableModel) {
-		this.tableModel = tableModel;
-		if (this.tableModel != null) {
-			Object[][] data = convertToTableData(this.selectedNode);
-			this.tableModel.setData(data);
 		}
 	}
 }

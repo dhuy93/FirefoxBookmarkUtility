@@ -31,9 +31,9 @@ public class BookmarkDTO {
 		result.setDateAdded(new Date(Long.parseLong(dateAdded)));
 		result.setLastModified(new Date(Long.parseLong(lastModified)));
 		result.setId(Long.parseLong(id));
-		if(type.equals(BookmarkType.CONTAINER)) {
+		if (type.equals(BookmarkType.CONTAINER.getValue())) {
 			result.setType(BookmarkType.CONTAINER);
-		} else if(type.equals(BookmarkType.PLACE)) {
+		} else if (type.equals(BookmarkType.PLACE.getValue())) {
 			result.setType(BookmarkType.PLACE);
 		}
 		result.setUri(uri);
@@ -49,7 +49,9 @@ public class BookmarkDTO {
 		return result;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
